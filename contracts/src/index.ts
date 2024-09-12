@@ -1,3 +1,2 @@
-import { Add } from './Add.js';
-
-export { Add };
+export * from "./Faucet.js";
+export * from 'mina-fungible-token';
