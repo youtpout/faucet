@@ -1,149 +1,126 @@
 
 import Head from 'next/head';
 import Image from 'next/image';
-import { useEffect } from 'react';
-import GradientBG from '../components/GradientBG.js';
+import { useEffect, useState } from 'react';
 import styles from '../styles/Home.module.css';
 import heroMinaLogo from '../../public/assets/hero-mina-logo.svg';
 import arrowRightSmall from '../../public/assets/arrow-right-small.svg';
+import ZkappWorkerClient from './zkappWorkerClient';
+import { PublicKey } from 'o1js';
+import Faucet from '@/components/Faucet';
+import Account from '@/components/Account';
 
 export default function Home() {
-  useEffect(() => {
-    (async () => {
-      const { Mina, PublicKey } = await import('o1js');
-      const { Add } = await import('../../../contracts/build/src/');
+  const faucetAddress = 'B62qrcjVWC5H4mkhJjLhBfWXx1hRP7F2dUt57QouaZ6ABZh48DD6wgP';
+  const tokenAddress = 'B62qnPKGpfthW2gbKf8Z2QxRokF8w354ui1oPWBWePHoHk5opPuEM6V';
 
-      // Update this to use the address (public key) for your zkApp account.
-      // To try it out, you can try this address for an example "Add" smart contract that we've deployed to
-      // Testnet B62qkwohsqTBPsvhYE8cPZSpzJMgoKn4i1LQRuBAtVXWpaT4dgH6WoA.
-      const zkAppAddress = '';
-      // This should be removed once the zkAppAddress is updated.
-      if (!zkAppAddress) {
-        console.error(
-          'The following error is caused because the zkAppAddress has an empty string as the public key. Update the zkAppAddress with the public key for your zkApp account, or try this address for an example "Add" smart contract that we deployed to Testnet: B62qkwohsqTBPsvhYE8cPZSpzJMgoKn4i1LQRuBAtVXWpaT4dgH6WoA'
-        );
+  const [state, setState] = useState({
+    zkappWorkerClient: null as null | ZkappWorkerClient,
+    hasWallet: null as null | boolean,
+    hasBeenSetup: false,
+    accountExists: false,
+    publicKey: null as null | PublicKey,
+    zkFaucetPublicKey: null as null | PublicKey,
+    creatingTransaction: false,
+  });
+
+  const [displayText, setDisplayText] = useState('');
+  const [transactionlink, setTransactionLink] = useState('');
+
+  // -------------------------------------------------------
+  // Do Setup
+
+  useEffect(() => {
+    async function timeout(seconds: number): Promise<void> {
+      return new Promise<void>((resolve) => {
+        setTimeout(() => {
+          resolve();
+        }, seconds * 1000);
+      });
+    }
+
+    (async () => {
+      if (!state.hasBeenSetup) {
+        setDisplayText('Loading web worker...');
+        console.log('Loading web worker...');
+        const zkappWorkerClient = new ZkappWorkerClient();
+        await timeout(1);
+
+        setDisplayText('Done loading web worker');
+        console.log('Done loading web worker');
+
+        await zkappWorkerClient.setActiveInstanceToDevnet();
+
+        await zkappWorkerClient.loadContract();
+
+
+        console.log('Compiling zkApp...');
+        setDisplayText('Compiling zkApp...');
+        await zkappWorkerClient.compileContract();
+        console.log('zkApp compiled');
+        setDisplayText('zkApp compiled...');
+
+        const zkTokenPublicKey = PublicKey.fromBase58(tokenAddress);
+        const zkFaucetPublicKey = PublicKey.fromBase58(faucetAddress);
+
+        await zkappWorkerClient.initZkappInstance(zkTokenPublicKey, zkFaucetPublicKey);
+
+        setDisplayText('');
+
+        setState({
+          ...state,
+          zkappWorkerClient,
+          hasWallet: true,
+          hasBeenSetup: true,
+          zkFaucetPublicKey,
+        });
       }
-      //const zkApp = new Add(PublicKey.fromBase58(zkAppAddress))
     })();
   }, []);
 
+  // -------------------------------------------------------
+  // Create UI elements
+
+
+  const stepDisplay = transactionlink ? (
+    <a
+      href={transactionlink}
+      target="_blank"
+      rel="noreferrer"
+      style={{ textDecoration: 'underline' }}
+    >
+      View transaction
+    </a>
+  ) : (
+    displayText
+  );
+
+  let setup = (
+    <div
+      className={styles.start}
+      style={{ fontWeight: 'bold', fontSize: '1.5rem', paddingBottom: '5rem' }}
+    >
+      {stepDisplay}
+    </div>
+  );
+
+
+
+  let mainContent = (
+    <div style={{ justifyContent: 'center', alignItems: 'center' }}>
+      <Account accountState={state}></Account>
+      {state.hasBeenSetup && <Faucet accountState={state}></Faucet>}
+    </div>
+  );
+
+
+
   return (
-    <>
-      <Head>
-        <title>Mina zkApp UI</title>
-        <meta name="description" content="built with o1js" />
-        <link rel="icon" href="/assets/favicon.ico" />
-      </Head>
-      <GradientBG>
-        <main className={styles.main}>
-          <div className={styles.center}>
-            <a
-              href="https://minaprotocol.com/"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <Image
-                className={styles.logo}
-                src={heroMinaLogo}
-                alt="Mina Logo"
-                width="191"
-                height="174"
-                priority
-              />
-            </a>
-            <p className={styles.tagline}>
-              built with
-              <code className={styles.code}> o1js</code>
-            </p>
-          </div>
-          <p className={styles.start}>
-            Get started by editing
-            <code className={styles.code}> src/pages/index.js</code> or <code className={styles.code}> src/pages/index.tsx</code>
-          </p>
-          <div className={styles.grid}>
-            <a
-              href="https://docs.minaprotocol.com/zkapps"
-              className={styles.card}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <h2>
-                <span>DOCS</span>
-                <div>
-                  <Image
-                    src={arrowRightSmall}
-                    alt="Mina Logo"
-                    width={16}
-                    height={16}
-                    priority
-                  />
-                </div>
-              </h2>
-              <p>Explore zkApps, how to build one, and in-depth references</p>
-            </a>
-            <a
-              href="https://docs.minaprotocol.com/zkapps/tutorials/hello-world"
-              className={styles.card}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <h2>
-                <span>TUTORIALS</span>
-                <div>
-                  <Image
-                    src={arrowRightSmall}
-                    alt="Mina Logo"
-                    width={16}
-                    height={16}
-                    priority
-                  />
-                </div>
-              </h2>
-              <p>Learn with step-by-step o1js tutorials</p>
-            </a>
-            <a
-              href="https://discord.gg/minaprotocol"
-              className={styles.card}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <h2>
-                <span>QUESTIONS</span>
-                <div>
-                  <Image
-                    src={arrowRightSmall}
-                    alt="Mina Logo"
-                    width={16}
-                    height={16}
-                    priority
-                  />
-                </div>
-              </h2>
-              <p>Ask questions on our Discord server</p>
-            </a>
-            <a
-              href="https://docs.minaprotocol.com/zkapps/how-to-deploy-a-zkapp"
-              className={styles.card}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <h2>
-                <span>DEPLOY</span>
-                <div>
-                  <Image
-                    src={arrowRightSmall}
-                    alt="Mina Logo"
-                    width={16}
-                    height={16}
-                    priority
-                  />
-                </div>
-              </h2>
-              <p>Deploy a zkApp to Testnet</p>
-            </a>
-          </div>
-        </main>
-      </GradientBG>
-    </>
+    <div className={styles.main} style={{ padding: 0 }}>
+      <div className={styles.center} style={{ padding: 0 }}>
+        {setup}
+        {mainContent}
+      </div>
+    </div>
   );
 }
