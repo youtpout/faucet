@@ -6,7 +6,7 @@ function loadCOIServiceWorker() {
     window.location.hostname != 'localhost'
   ) {
     const coi = window.document.createElement('script');
-    coi.setAttribute('src', '/faucet/coi-serviceworker.min.js'); // update if your repo name changes for 'npm run deploy' to work correctly
+    coi.setAttribute('src', '/coi-serviceworker.min.js'); // update if your repo name changes for 'npm run deploy' to work correctly
     window.document.head.appendChild(coi);
   }
 }
