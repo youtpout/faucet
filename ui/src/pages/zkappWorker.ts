@@ -1,5 +1,5 @@
 import { Account, AccountUpdate, Bool, Mina, PrivateKey, PublicKey, UInt32, UInt64, fetchAccount } from "o1js";
-
+import { fetchFiles, readCache } from "./cache";
 console.log('Load Web Worker.');
 
 import type { FungibleToken, FungibleTokenAdmin, Faucet } from "../../../contracts/src/index";
@@ -59,9 +59,12 @@ const functions = {
   },
   compileContract: async (args: {}) => {
     console.time("compile");
-    await state.TokenAdmin?.compile({});
-    await state.TokenStandard?.compile({});
-    await state.Faucet!.compile({});
+    const cacheFiles = await fetchFiles();
+    const cache = readCache(cacheFiles);
+
+    await state.TokenAdmin?.compile({ cache });
+    await state.TokenStandard?.compile({ cache });
+    await state.Faucet!.compile({ cache });
 
     console.timeEnd("compile");
   },
